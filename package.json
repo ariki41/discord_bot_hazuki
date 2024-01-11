@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "discord.js": "^14.14.1",
+    "fs": "^0.0.1-security",
+    "ini": "^4.1.1",
+    "ping": "^0.4.4"
+  }
+}

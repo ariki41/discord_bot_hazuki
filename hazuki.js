@@ -1,15 +1,14 @@
 //ログイン処理
-const Discord = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 const ping = require('ping');
 const fs = require('fs');
 const chokidar = require("chokidar");
 const ini = require('ini');
 
-var config = ini.parse(fs.readFileSync('./config.ini', 'utf-8'));
+const config = ini.parse(fs.readFileSync('./config.ini', 'utf-8'));
 
-const client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages] });
 const token = config.token;
-
 
 const watcher = chokidar.watch('./data',{
 	ignored:/[\/\\]\./,
@@ -18,9 +17,16 @@ const watcher = chokidar.watch('./data',{
 	interval: 1000
 });
 
+const sliceMessage = (array, number) => {
+	const length = Math.ceil(array.length / number);
+	return new Array(length).fill().map((_, i) =>
+		array.slice(i * number, (i + 1) * number)
+	);
+}
+
 client.on('ready', () => {
   setInterval(function () {
-    var hosts = ['192.168.2.10'];
+    var hosts = ['kaede'];
     hosts.forEach(function (host) {
       ping.sys.probe(host, function (isAlive) {
         var msg = isAlive ? "✅ 起動中" : "❌ 停止中";
@@ -38,7 +44,6 @@ client.on('ready', () => {
 watcher.on('ready', function(){
 	//準備完了
 	console.log("ready watching...");
-
 
 	//ファイルの編集
 	watcher.on('change',function(path){
@@ -60,9 +65,13 @@ watcher.on('ready', function(){
 			}
 
 			//console.log(text);
-			var send_message = lines.join('\n');
-			//console.log(send_message);
-			client.channels.cache.get(config.channel_id).send('```' + send_message + '```');
+			//var send_message = lines.join('\n');
+			const sendMessage = sliceMessage(lines, 10);
+			console.log(sendMessage);
+			
+			sendMessage.forEach(function(message) {
+				client.channels.cache.get(config.channel_id).send('```' + message.join('\n') + '```');
+			});
 		}
 		
 	});
