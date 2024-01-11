@@ -1,14 +1,16 @@
 //ログイン処理
-const { Client, GatewayIntentBits } = require('discord.js');
+const { ButtonBuilder, ButtonStyle, ActionRowBuilder, Client, GatewayIntentBits } = require('discord.js');
 const ping = require('ping');
 const fs = require('fs');
 const chokidar = require("chokidar");
 const ini = require('ini');
+const wol = require('wake_on_lan');
 
 const config = ini.parse(fs.readFileSync('./config.ini', 'utf-8'));
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages] });
 const token = config.token;
+const testChannelId = config.test_channel_id; 
 
 const watcher = chokidar.watch('./data',{
 	ignored:/[\/\\]\./,
@@ -24,21 +26,54 @@ const sliceMessage = (array, number) => {
 	);
 }
 
-client.on('ready', () => {
-  setInterval(function () {
-    var hosts = ['kaede'];
-    hosts.forEach(function (host) {
-      ping.sys.probe(host, function (isAlive) {
-        var msg = isAlive ? "✅ 起動中" : "❌ 停止中";
+async function ButtonCreate(channelId) {
+	const channel = await client.channels.fetch(channelId);
+	const btnBoot = new ButtonBuilder()
+		.setCustomId('boot')
+		.setLabel('起動')
+		.setEmoji('🟢')
+		.setStyle(ButtonStyle.Primary);
+	channel.send({
+		components: [
+			new ActionRowBuilder().setComponents(btnBoot)
+		]
+	});
+}
 
-        client.user.setPresence({
-          activities: [{ name: `${msg}` }],
-          status: "online"
-        });
-        //console.log(`${msg}`);
-      });
-    });
-  }, 1000);
+client.on('interactionCreate', async interaction => {
+	if(!interaction.isButton() || interaction.customId !== 'boot') {
+		return;
+	}
+	
+	wol.wake(config.mac);
+
+	await interaction.reply({
+		content: 'サーバを起動しました。\n 5秒後にメッセージが削除されます。',
+		ephemeral: true
+	});
+	await setTimeout(() => {
+		interaction.deleteReply();
+	}, 5000);
+});
+
+
+
+client.on('ready', () => {
+	//ButtonCreate(testChannelId);
+
+ 	setInterval(function () {
+    		const host = 'kaede';
+    		
+      		ping.sys.probe(host, function (isAlive) {
+	        
+			const msg = isAlive ? "✅ 起動中" : "❌ 停止中";
+
+        		client.user.setPresence({
+          			activities: [{ name: `${msg}` }],
+		          	status: "online"
+			});
+		});
+  	}, 1000);
 });
 
 watcher.on('ready', function(){
